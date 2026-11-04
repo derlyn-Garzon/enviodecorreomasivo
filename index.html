@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup Optimista - Solicitud de Vacante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- SDK oficial de Supabase (UMD: expone window.supabase.createClient) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Animaciones de las notificaciones (toasts) */
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes toast-out {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to   { opacity: 0; transform: translateY(-12px) scale(0.96); }
+        }
+        .toast-enter { animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .toast-leave { animation: toast-out 0.22s ease-in both; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 0.7s linear infinite; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Contenedor de notificaciones (toasts) -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-3 w-[calc(100%-2rem)] sm:w-96 pointer-events-none"></div>
+
+    <div class="max-w-3xl w-full bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl shadow-xl border border-white flex flex-col gap-6">
+
+        <!-- Panel de Controles -->
+        <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email de la empresa</label>
+                <input type="email" id="inputEmail" value="rrhh@empresa.com" oninput="updateCard()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm bg-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Idioma de la vacante</label>
+                <select id="inputLang" onchange="updateCard()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm bg-white">
+                    <option value="es">Español</option>
+                    <option value="en">Inglés (English)</option>
+                    <option value="fr">Francés (Français)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Configuración de Supabase (colapsable, mismo lenguaje visual) -->
+        <details id="supabaseConfig" class="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden group">
+            <summary class="cursor-pointer list-none px-4 sm:px-5 py-3 flex items-center justify-between text-xs font-bold text-slate-700 uppercase select-none">
+                <span class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Conexión Supabase
+                </span>
+                <span id="configStatus" class="text-[10px] font-medium normal-case tracking-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">Sin configurar</span>
+            </summary>
+            <div class="px-4 sm:px-5 pb-4 grid grid-cols-1 gap-3 border-t border-slate-200 pt-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Supabase URL</label>
+                    <input type="text" id="inputSupabaseUrl" placeholder="https://xxxxxxxx.supabase.co" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm bg-white font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Supabase Anon Key</label>
+                    <input type="password" id="inputSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm bg-white font-mono">
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+                    <p class="text-[11px] text-slate-400 leading-relaxed">La clave anónima es pública por diseño; protégela con Row Level Security.</p>
+                    <button type="button" onclick="saveSupabaseConfig()" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-4 rounded-xl transition duration-200">Conectar</button>
+                </div>
+            </div>
+        </details>
+
+        <!-- El Mockup Visual (Área de Captura) -->
+        <div id="captureArea" class="bg-gradient-to-br from-white to-emerald-50/60 p-6 sm:p-8 rounded-2xl shadow-md border border-emerald-100 flex flex-col justify-between space-y-6 relative overflow-hidden">
+
+            <!-- Decoración sutil de fondo -->
+            <div class="absolute -right-12 -top-12 w-36 h-36 bg-emerald-200/40 rounded-full blur-2xl pointer-events-none"></div>
+
+            <!-- Cabecera -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-emerald-600/30">✨</div>
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-sm" id="cardEmail">Para: rrhh@empresa.com</h2>
+                        <span class="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md" id="cardLangBadge">Idioma: Español</span>
+                    </div>
+                </div>
+                <span class="text-xs text-slate-400 font-mono">2026</span>
+            </div>
+
+            <!-- Cuerpo de la carta (Tranquilo, cercano y optimista) -->
+            <div class="space-y-3 text-slate-600 text-xs sm:text-sm leading-relaxed">
+                <p class="font-bold text-slate-800">¡Hola equipo de selección! 👋</p>
+                <p id="cardBody">
+                    Me tomé la libertad de escribirles directamente porque vi su propuesta y sentí una conexión inmediata con lo que están construyendo. No busco solo un puesto más, sino un espacio donde mis ganas de crear, aportar buena energía y aprender se sumen a su propósito.
+                </p>
+                <p class="text-slate-500 italic text-xs">
+                    "Las grandes cosas en los negocios nunca son hechas por una sola persona." Me encantaría charlar y ver cómo podemos hacer magia juntos.
+                </p>
+            </div>
+
+            <!-- Firma y Estado -->
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Identidad</p>
+                    <p class="text-xs font-bold text-slate-800">Candidato Apasionado 🚀</p>
+                </div>
+                <div class="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-medium">
+                    Cultura & Propósito
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Acciones -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="downloadMockup()" class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold py-3 px-4 rounded-xl shadow-sm transition duration-200 flex items-center justify-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>Descargar Mockup en Imagen</span>
+            </button>
+
+            <button id="btnSaveDb" onclick="saveToSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-emerald-600/20 transition duration-200 flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="btnSaveIcon" class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </span>
+                <span id="btnSaveText">Guardar en Base de Datos</span>
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURACIÓN DE SUPABASE
+        // Puedes fijar aquí tus credenciales o introducirlas en el
+        // panel "Conexión Supabase" (se guardan en localStorage).
+        // ============================================================
+        const SUPABASE_URL = '';        // ej: 'https://xxxxxxxx.supabase.co'
+        const SUPABASE_ANON_KEY = '';   // ej: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...'
+        const TABLE_NAME = 'postulaciones';
+
+        let supabaseClient = null;
+
+        // ---------- Utilidades de configuración ----------
+        function getConfig() {
+            const url = (SUPABASE_URL || localStorage.getItem('supabase_url') || '').trim();
+            const key = (SUPABASE_ANON_KEY || localStorage.getItem('supabase_key') || '').trim();
+            return { url, key };
+        }
+
+        function initSupabase() {
+            const { url, key } = getConfig();
+
+            const urlInput = document.getElementById('inputSupabaseUrl');
+            const keyInput = document.getElementById('inputSupabaseKey');
+            if (url) urlInput.value = url;
+            if (key) keyInput.value = key;
+
+            const status = document.getElementById('configStatus');
+            const openPanel = () => document.getElementById('supabaseConfig').setAttribute('open', '');
+
+            if (!url || !key) {
+                status.innerText = 'Sin configurar';
+                status.className = 'text-[10px] font-medium normal-case tracking-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md';
+                openPanel();
+                return;
+            }
+
+            if (typeof supabase === 'undefined' || !supabase.createClient) {
+                status.innerText = 'SDK no cargado';
+                status.className = 'text-[10px] font-medium normal-case tracking-normal text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md';
+                return;
+            }
+
+            try {
+                supabaseClient = supabase.createClient(url, key);
+                status.innerText = 'Conectado';
+                status.className = 'text-[10px] font-medium normal-case tracking-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md';
+            } catch (e) {
+                supabaseClient = null;
+                status.innerText = 'Credenciales inválidas';
+                status.className = 'text-[10px] font-medium normal-case tracking-normal text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md';
+                openPanel();
+            }
+        }
+
+        function saveSupabaseConfig() {
+            const url = document.getElementById('inputSupabaseUrl').value.trim();
+            const key = document.getElementById('inputSupabaseKey').value.trim();
+
+            if (!url || !key) {
+                showToast('error', 'Faltan credenciales', 'Introduce la URL y la Anon Key de tu proyecto Supabase.');
+                return;
+            }
+
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_key', key);
+            initSupabase();
+
+            if (supabaseClient) {
+                showToast('success', 'Conexión establecida', 'Supabase está listo para guardar postulaciones.');
+            }
+        }
+
+        // ---------- Previsualización dinámica ----------
+        function updateCard() {
+            const email = document.getElementById('inputEmail').value || 'rrhh@empresa.com';
+            const lang = document.getElementById('inputLang').value;
+
+            document.getElementById('cardEmail').innerText = `Para: ${email}`;
+
+            const langTexts = {
+                'es': {
+                    badge: 'Idioma: Español',
+                    body: 'Me tomé la libertad de escribirles directamente porque vi su propuesta y sentí una conexión inmediata con lo que están construyendo. No busco solo un puesto más, sino un espacio donde mis ganas de crear, aportar buena energía y aprender se sumen a su propósito.'
+                },
+                'en': {
+                    badge: 'Idioma: Inglés (English)',
+                    body: "Hello recruitment team! 👋 I'm reaching out directly because I saw your job opening and felt an immediate connection with what you're building. I'm looking for a space where my creativity and positive energy can add real value."
+                },
+                'fr': {
+                    badge: 'Idioma: Francés (Français)',
+                    body: "Bonjour l'équipe de recrutement ! 👋 Je vous écris directement car j'ai vu votre offre et j'ai ressenti une connexion immédiate avec ce que vous construisez. J'hâte d'apporter ma créativité et ma motivation."
+                }
+            };
+
+            document.getElementById('cardLangBadge').innerText = langTexts[lang].badge;
+            document.getElementById('cardBody').innerText = langTexts[lang].body;
+        }
+
+        // ---------- Notificaciones (toasts) ----------
+        function showToast(type, title, message) {
+            const isSuccess = type === 'success';
+            const container = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = `toast-enter pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-xl border backdrop-blur-md ${
+                isSuccess
+                    ? 'bg-emerald-50/95 border-emerald-200 text-emerald-900'
+                    : 'bg-rose-50/95 border-rose-200 text-rose-900'
+            }`;
+
+            toast.innerHTML = `
+                <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white text-lg shadow-md ${
+                    isSuccess ? 'bg-emerald-600 shadow-emerald-600/30' : 'bg-rose-600 shadow-rose-600/30'
+                }">
+                    ${isSuccess ? '✓' : '!'}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold">${title}</p>
+                    <p class="text-xs mt-0.5 ${isSuccess ? 'text-emerald-700' : 'text-rose-700'} leading-relaxed">${message}</p>
+                </div>
+                <button type="button" class="shrink-0 text-slate-400 hover:text-slate-600 transition" aria-label="Cerrar">✕</button>
+            `;
+
+            const dismiss = () => {
+                if (toast.dataset.closing) return;
+                toast.dataset.closing = '1';
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-leave');
+                toast.addEventListener('animationend', () => toast.remove(), { once: true });
+            };
+
+            toast.querySelector('button').addEventListener('click', dismiss);
+            container.appendChild(toast);
+            setTimeout(dismiss, 5000);
+        }
+
+        // ---------- Guardar en Supabase ----------
+        function setSavingState(isSaving) {
+            const btn = document.getElementById('btnSaveDb');
+            const text = document.getElementById('btnSaveText');
+            const icon = document.getElementById('btnSaveIcon');
+
+            btn.disabled = isSaving;
+            text.innerText = isSaving ? 'Guardando...' : 'Guardar en Base de Datos';
+            icon.innerHTML = isSaving
+                ? '<span class="spinner inline-block h-5 w-5 rounded-full border-2 border-white/40 border-t-white"></span>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+        }
+
+        async function saveToSupabase() {
+            const emailInput = document.getElementById('inputEmail');
+            const email = emailInput.value.trim();
+            const lang = document.getElementById('inputLang').value;
+
+            // Validación amigable del email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showToast('error', 'Email no válido', 'Revisa el correo de la empresa antes de guardar.');
+                emailInput.focus();
+                return;
+            }
+
+            if (!supabaseClient) {
+                showToast('error', 'Supabase no está conectado', 'Añade la URL y la Anon Key en el panel "Conexión Supabase".');
+                document.getElementById('supabaseConfig').setAttribute('open', '');
+                return;
+            }
+
+            setSavingState(true);
+
+            try {
+                const { error } = await supabaseClient
+                    .from(TABLE_NAME)
+                    .insert([{ company_email: email, job_language: lang }]);
+
+                if (error) throw error;
+
+                showToast('success', '¡Postulación guardada!', `Registramos ${email} con idioma "${lang.toUpperCase()}" en la tabla ${TABLE_NAME}.`);
+            } catch (err) {
+                console.error('Error al guardar en Supabase:', err);
+                showToast('error', 'No se pudo guardar', err.message || 'Revisa la conexión y las políticas RLS de la tabla.');
+            } finally {
+                setSavingState(false);
+            }
+        }
+
+        // ---------- Descarga del mockup ----------
+        function downloadMockup() {
+            const element = document.getElementById('captureArea');
+            html2canvas(element, { scale: 2, backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'mockup-carta-vacante.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // ---------- Arranque ----------
+        document.getElementById('inputEmail').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveToSupabase();
+        });
+
+        updateCard();
+        initSupabase();
+    </script>
+</body>
+</html>
