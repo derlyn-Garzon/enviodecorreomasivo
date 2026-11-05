@@ -1,0 +1,23 @@
+{
+  "name": "enviodecorreomasivo-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend Node.js/TypeScript sobre Supabase para la tabla public.postulaciones",
+  "scripts": {
+    "build": "tsc --noEmit && tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "cron": "tsx src/jobs/enviarPendientes.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
